@@ -3,22 +3,35 @@
 You can use this for getting server-net on worlds.
 
 It has post requests, get requests, put requests and everything you can do with `fetch()`.
+
+This is made all possible because of the [debugger server](https://github.com/TrayePlays/Hive-Mind-Debugger) back-end.
+
 There are options to set like using script events, and logging failures.
 
-# Usage
+# Installation
+
+### For TypeScript
+Install the [api.ts](https://github.com/TrayePlays/Hive-Mind-Api-Public/blob/main/src/api.ts) and put it in your project.
+
+### For JavaScript
+Install both [api.js](https://github.com/TrayePlays/Hive-Mind-Api-Public/blob/main/js/api.js) and [api.d.ts](https://github.com/TrayePlays/Hive-Mind-Api-Public/blob/main/js/api.d.ts) and put them in your project
+
+# Connecting
 
 You are first going to need to connect to Hive Mind.
 There are 2 ways:
 
-## 1 Automatically:
-- Open your settings > creator and put this in
+## 1. Automatically:
+- ### Open your settings > creator and put this in
 ![Auto Connect](./images/autoConnect.png)
 
-## 2 Manually: 
-- In game type:
+## 2. Manually: 
+- ### When in game type:
 ![/script debugger connect traye.ddns.net](./images/manualCommand.png)
 
-For a simple GET request use this:
+# Usage
+
+### For a simple GET request use this:
 ```ts
 import { system, world } from "@minecraft/server";
 import { HivemindAPI } from "./api";
@@ -46,7 +59,7 @@ world.afterEvents.itemUse.subscribe(async ({ itemStack }) => {
 })
 ```
 
-For a simple POST request use this:
+### For a simple POST request use this:
 ```ts
 import { system, world } from "@minecraft/server";
 import { HivemindAPI } from "./api";
@@ -78,13 +91,5 @@ world.afterEvents.itemUse.subscribe(async ({ itemStack }) => {
 })
 ```
 
-# How to install
-
-## For Typescript
-Install the [api.ts](https://github.com/TrayePlays/Hive-Mind-Api-Public/blob/main/src/api.ts) and put it in your project.
-
-## For Javascript
-Install both [api.js](https://github.com/TrayePlays/Hive-Mind-Api-Public/blob/main/js/api.js) and [api.d.ts](https://github.com/TrayePlays/Hive-Mind-Api-Public/blob/main/js/api.d.ts) and put them in your project
-
-# Need help?
-[Join the discord!](https://discord.gg/GHzNqpZ4Bu)
+# Need help? 
+- ### [Join the discord!](https://discord.gg/GHzNqpZ4Bu)

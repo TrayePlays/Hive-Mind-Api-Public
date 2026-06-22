@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "ES2020",
+
+    "moduleResolution": "bundler",
+
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+
+    "types": ["node"],
+
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+
+    "rootDir": "./src",
+    "outDir": "./scripts",
+
+    "resolveJsonModule": true,
+    "isolatedModules": false,
+    "strict": false,
+  },
+  "include": ["src"],
+  "exclude": ["node_modules"]
+}

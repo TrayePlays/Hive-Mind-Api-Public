@@ -1,0 +1,54 @@
+{
+    "format_version": 2,
+    "header": {
+        "name": "Hive Mind API PUBLIC",
+        "description": "Version 0.1 BETA\n-By TrayePlays & EmmAndEmmz",
+        "min_engine_version": [
+            1,
+            21,
+            0
+        ],
+        "uuid": "3bac5437-d3cb-4787-959b-a0acc73db8d8",
+        "version": [
+            1,
+            0,
+            0
+        ]
+    },
+    "metadata": {
+        "authors": [
+            "TrayePlays",
+            "EmmAndEmmz"
+        ],
+        "product_type": "addon",
+        "license": "MIT"
+    },
+    "modules": [
+        {
+            "type": "data",
+            "uuid": "842f380b-b39a-4679-a925-891657448950",
+            "version": [
+                1,
+                0,
+                0
+            ]
+        },
+        {
+            "type": "script",
+            "language": "javascript",
+            "uuid": "1b9a9baf-11ec-4035-b411-ad1501bdfc3b",
+            "entry": "scripts/usage.js",
+            "version": [
+                1,
+                0,
+                0
+            ]
+        }
+    ],
+    "dependencies": [
+        {
+            "module_name": "@minecraft/server",
+            "version": "2.7.0"
+        }
+    ]
+}

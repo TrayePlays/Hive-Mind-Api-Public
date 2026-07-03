@@ -37,7 +37,7 @@
             "type": "script",
             "language": "javascript",
             "uuid": "1b9a9baf-11ec-4035-b411-ad1501bdfc3b",
-            "entry": "scripts/usage.js",
+            "entry": "scripts/index.js",
             "version": [
                 1,
                 0,

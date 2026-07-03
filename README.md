@@ -8,6 +8,9 @@ This is made all possible because of the [debugger server](https://github.com/Tr
 
 There are options to set like using script events, and logging failures.
 
+# WARNING
+If you intend to post / share the mod. Please encrypt / obfuscate your key otherwise the downloader will be able to see it.
+
 # Installation
 
 ### For TypeScript
@@ -90,6 +93,9 @@ world.afterEvents.itemUse.subscribe(async ({ itemStack }) => {
     }
 })
 ```
+
+# Database Setup
+If you want to use Hive Mind API for a database refer to [this page](DATABASE.md)
 
 # Need help? 
 - ### [Join the discord!](https://discord.gg/GHzNqpZ4Bu)

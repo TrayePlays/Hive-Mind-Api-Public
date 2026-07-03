@@ -1,7 +1,5 @@
 import { system, world } from "@minecraft/server";
-import { HivemindAPI } from "./api";
-
-const api = new HivemindAPI("<Your Mod / Name>", { scriptEvent: false });
+import { api } from "../index";
 
 world.afterEvents.itemUse.subscribe(async ({ itemStack }) => {
     if (itemStack.typeId == "minecraft:diamond") {

@@ -1,15 +1,10 @@
 import { CommandPermissionLevel, CustomCommandOrigin, CustomCommandParamType, system, world, CustomCommandResult, CustomCommandStatus, CustomCommand, CustomCommandSource } from "@minecraft/server";
 
-const VERSION = 0.2;
+const VERSION = 0.3;
 
 // Enums converted to plain objects
 const RequestTypes = {
     HttpRequest: "httpRequest"
-};
-
-const DynamicPropertyTypes = {
-    Player: "player",
-    World: "world"
 };
 
 const ServerStatusResponse = {
@@ -71,9 +66,8 @@ export class HivemindAPI {
                 if (id === "hivemind:purpose") purposeCMD(origin);
                 if (id === "hivemind:hivemind") hivemindCMD(origin);
                 if (id === "hivemind:respond") respondCMD(origin, message);
-                if (id === "hivemind:set") {
-                    setCMD(origin, args[0], args[1], message.slice(args[0].length + args[1].length + 2));
-                }
+                if (id === "hivemind:set") setCMD(origin, args[0], args[1], message.slice(args[0].length + args[1].length + 2));
+                
             });
         } else {
             system.beforeEvents.startup.subscribe(({ customCommandRegistry }) => {
@@ -190,12 +184,18 @@ export class HivemindAPI {
                 responses.set(requestId, raw);
             }
 
+
             if (setAction === SetActions.Remove) {
+                const chunks = world?.getDynamicProperty(`hivemindRequest${requestId}|meta`) ?? 0
+                for (let i = 0; i < chunks; i++) {
+                    world.setDynamicProperty(`hivemindRequest${requestId}|${i}`)
+                }
+                world.setDynamicProperty(`hivemindRequest${requestId}|meta`)
+                // Works with old version too
                 world.setDynamicProperty(rawData);
             }
-
-            if (setAction === SetActions.Reset) {
-                responses.delete(requestId);
+            if (setAction == SetActions.Reset) {
+                responses.delete(requestId)
             }
 
             if (setAction === SetActions.Get) {
@@ -210,6 +210,14 @@ export class HivemindAPI {
         }
     }
 
+    splitString(str, size = 32767) {
+        const chunks = [];
+        for (let i = 0; i < str.length; i += size) {
+            chunks.push(str.substring(i, i + size));
+        }
+        return chunks;
+    }
+
     async sendRequestAsync(data, timeoutTicks = 50) {
         return new Promise((resolve, reject) => {
             if (!data.id) return reject(new Error("No request ID!"));
@@ -220,7 +228,7 @@ export class HivemindAPI {
             const timeout = system.runTimeout(() => {
                 world.setDynamicProperty(`hivemindRequest${id}`);
                 this.pendingRequests.delete(id);
-                reject(new Error("Timed out on waiting for server response."));
+                reject(new Error("Timed out on waiting for server response. Make sure you are connected: /script debugger connect traye.ddns.net"));
             }, timeoutTicks);
 
             this.pendingRequests.set(id, (response, done) => {
@@ -232,7 +240,14 @@ export class HivemindAPI {
                 }
             });
 
-            world.setDynamicProperty(`hivemindRequest${id}`, JSON.stringify(data));
+            const json = JSON.stringify(data);
+            const chunks = this.splitString(json);
+
+            world.setDynamicProperty(`hivemindRequest${id}|meta`, chunks.length);
+
+            for (let i = 0; i < chunks.length; i++) {
+                world.setDynamicProperty(`hivemindRequest${id}|${i}`, chunks[i]);
+            }
         });
     }
 
@@ -251,9 +266,6 @@ export class HivemindAPI {
     }
 
     async sendHttpRequest(uri, init, timeoutTicks = 50) {
-        return await this.sendRequestAsync(
-            this.buildRequest(RequestTypes.HttpRequest, { uri, init }),
-            timeoutTicks
-        );
+        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init }), timeoutTicks);
     }
 }

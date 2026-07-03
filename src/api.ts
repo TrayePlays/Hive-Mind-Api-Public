@@ -1,6 +1,6 @@
 import { CommandPermissionLevel, CustomCommandOrigin, CustomCommandParamType, system, world, CustomCommandResult, CustomCommandStatus, CustomCommand, CustomCommandSource } from "@minecraft/server";
 
-const VERSION = 0.2;
+const VERSION = 0.3;
 
 export interface Request {
     type: RequestTypes
@@ -27,7 +27,7 @@ export interface HttpRequestData {
  * Soon to add more request types!
  */
 export enum RequestTypes {
-    HttpRequest = "httpRequest",
+    HttpRequest = "httpRequest"
 }
 
 export interface ServerResponse {
@@ -50,6 +50,7 @@ export enum SetActions {
     Get = "get",
     Remove = "remove"
 }
+
 interface HiveMindAPISettings {
     namespace?: string,
     scriptEvent?: boolean
@@ -72,9 +73,9 @@ export class HivemindAPI {
      * @warn Namespace MUST have no spaces!!!
      */
     constructor(apiName: string, settings: HiveMindAPISettings = { namespace: "hivemind", scriptEvent: true, logFailures: true }) {
-        if (settings.logFailures == undefined) settings.logFailures = true;
-        if (settings.namespace == undefined) settings.namespace = "hivemind";
-        if (settings.scriptEvent == undefined) settings.scriptEvent = true;
+        if (settings.logFailures === undefined) settings.logFailures = true;
+        if (settings.namespace === undefined) settings.namespace = "hivemind";
+        if (settings.scriptEvent === undefined) settings.scriptEvent = true;
         this.logFailures = settings.logFailures;
         this.scriptEvent = settings.scriptEvent;
         this.pendingRequests = new Map<string, (response: ServerResponse, done?: boolean) => void>();
@@ -84,11 +85,12 @@ export class HivemindAPI {
         this.setupListeners();
         this.initSetup();
     }
+
     private initSetup() {
         system.run(() => {
             //removes all old requests
             for (const dp of world.getDynamicPropertyIds().filter(dp => dp.startsWith("hivemindRequest"))) {
-                world.setDynamicProperty(dp)
+                world.setDynamicProperty(dp);
             }
             world.setDynamicProperty(`hivemindResponse`, JSON.stringify({
                 version: VERSION,
@@ -97,8 +99,9 @@ export class HivemindAPI {
             }));
         })
     }
+
     private setupListeners() {
-        const name = this.apiName
+        const name = this.apiName;
         const logFailures = this.logFailures;
         const responses = this.responses;
         const pendingRequests = this.pendingRequests;
@@ -106,20 +109,16 @@ export class HivemindAPI {
 
         if (scriptEvent) {
             system.afterEvents.scriptEventReceive.subscribe(({ id, message, sourceEntity }) => {
-                const origin = { sourceEntity, sourceType: CustomCommandSource.Entity }
-                const args = message.split(" ")
-                if (id == "hivemind:purpose") {
-                    purposeCMD(origin)
-                }
-                if (id == "hivemind:hivemind") {
-                    hivemindCMD(origin);
-                }
-                if (id == "hivemind:respond") {
-                    respondCMD(origin, message);
-                }
-                if (id == "hivemind:set") {
-                    setCMD(origin, args[0] as SetActions, args[1], message.slice(args[0].length + args[1].length + 2));
-                }
+                const origin = { sourceEntity, sourceType: CustomCommandSource.Entity };
+                const args = message.split(" ");
+                if (id === "hivemind:purpose") purposeCMD(origin);
+                
+                if (id === "hivemind:hivemind") hivemindCMD(origin);
+                
+                if (id === "hivemind:respond") respondCMD(origin, message);
+                
+                if (id === "hivemind:set") setCMD(origin, args[0] as SetActions, args[1], message.slice(args[0].length + args[1].length + 2));
+                
             })
         } else {
             system.beforeEvents.startup.subscribe(({ customCommandRegistry }) => {
@@ -127,13 +126,13 @@ export class HivemindAPI {
                     name: `${this.namespace}:purpose`,
                     description: "Checks purpose and name (FOR API)",
                     permissionLevel: CommandPermissionLevel.Admin
-                }
+                };
 
                 const hivemind: CustomCommand = {
                     name: `${this.namespace}:hivemind`,
                     description: "Checks version of hivemind (FOR API)",
                     permissionLevel: CommandPermissionLevel.Admin
-                }
+                };
 
                 const respond: CustomCommand = {
                     name: `${this.namespace}:respond`,
@@ -142,7 +141,7 @@ export class HivemindAPI {
                     mandatoryParameters: [
                         { name: "response", type: CustomCommandParamType.String }
                     ]
-                }
+                };
 
                 const set: CustomCommand = {
                     name: `${this.namespace}:set`,
@@ -151,18 +150,18 @@ export class HivemindAPI {
                     mandatoryParameters: [
                         //Setting it to name because stable apis
                         { name: `${this.namespace}:setActions`, type: CustomCommandParamType.Enum, enumName: `${this.namespace}:setActions` },
-                        { name: "requestId", type: CustomCommandParamType.String },
+                        { name: "requestId", type: CustomCommandParamType.String }
                     ],
                     optionalParameters: [
                         { name: "rawData", type: CustomCommandParamType.String }
                     ]
-                }
+                };
 
-                customCommandRegistry.registerEnum(`${this.namespace}:setActions`, Object.values(SetActions))
-                customCommandRegistry.registerCommand(purpose, purposeCMD)
-                customCommandRegistry.registerCommand(hivemind, hivemindCMD)
-                customCommandRegistry.registerCommand(respond, respondCMD)
-                customCommandRegistry.registerCommand(set, setCMD)
+                customCommandRegistry.registerEnum(`${this.namespace}:setActions`, Object.values(SetActions));
+                customCommandRegistry.registerCommand(purpose, purposeCMD);
+                customCommandRegistry.registerCommand(hivemind, hivemindCMD);
+                customCommandRegistry.registerCommand(respond, respondCMD);
+                customCommandRegistry.registerCommand(set, setCMD);
             })
         }
         function purposeCMD(origin: CustomCommandOrigin): CustomCommandResult {
@@ -181,9 +180,11 @@ export class HivemindAPI {
         function respondCMD(origin: CustomCommandOrigin, response: string): CustomCommandResult {
             const [id, statusStr, message, data] = response.split("|");
             const status = parseInt(statusStr);
+            let realData: any
+            const resolver = pendingRequests.get(id);
+            let requestedData = responses.get(id);
             if (status == ServerStatusResponse.Ran) {
-                const resolver = pendingRequests.get(id);
-                let requestedData = responses.get(id);
+                
                 try {
                     requestedData = JSON.parse(requestedData);
                     if (scriptEvent) requestedData = JSON.parse(requestedData)
@@ -215,11 +216,8 @@ export class HivemindAPI {
                     }
                 }
             } else {
-                const resolver = pendingRequests.get(id);
-                let requestedData = responses.get(id);
-                let realData: any;
                 try {
-                    realData = JSON.parse(requestedData)
+                    realData = JSON.parse(requestedData);
                 } catch { }
                 if (resolver) {
                     resolver({
@@ -227,8 +225,8 @@ export class HivemindAPI {
                         message: message || undefined,
                         data: requestedData ?? data,
                         getData() {
-                            return realData
-                        },
+                            return realData;
+                        }
                     }, true);
                 }
             }
@@ -236,37 +234,53 @@ export class HivemindAPI {
         }
 
         function setCMD(origin: CustomCommandOrigin, setAction: SetActions, requestId: string, rawData: string): CustomCommandResult {
-            if (setAction == SetActions.Add) {
-                let raw = responses.get(requestId) as string ?? ""
-                raw += rawData
+            if (setAction === SetActions.Add) {
+                let raw = responses.get(requestId) as string ?? "";
+                raw += rawData;
                 responses.set(requestId, raw);
             }
-            if (setAction == SetActions.Remove) {
+            if (setAction === SetActions.Remove) {
+                const chunks = world?.getDynamicProperty(`hivemindRequest${requestId}|meta`) as number ?? 0
+                for (let i = 0; i < chunks; i++) {
+                    world.setDynamicProperty(`hivemindRequest${requestId}|${i}`)
+                }
+                world.setDynamicProperty(`hivemindRequest${requestId}|meta`)
+                // Works with old version too
                 world.setDynamicProperty(rawData);
             }
             if (setAction == SetActions.Reset) {
                 responses.delete(requestId)
             }
-            if (setAction == SetActions.Get) {
-                return { status: CustomCommandStatus.Success, message: `${responses.get(requestId)}` }
+            if (setAction === SetActions.Get) {
+                return { status: CustomCommandStatus.Success, message: `${responses.get(requestId)}` };
             }
-            if (setAction == SetActions.Set) {
+            if (setAction === SetActions.Set) {
                 responses.set(requestId, rawData)
             }
             return { status: CustomCommandStatus.Success };
         }
     }
     /**
+     * @remarks Splits up string to the max limit Minecraft can handle in a dynamic property
+     */
+    private splitString(str: string, size = 32767): string[] {
+        const chunks = [];
+        for (let i = 0; i < str.length; i += size) {
+            chunks.push(str.substring(i, i + size));
+        }
+        return chunks;
+    }
+    /**
      * @remarks Sends a request with the raw data you give it and returns a response. Runs for each in the player list (defaults to only hosts).
      */
     private async sendRequestAsync(data: Request, timeoutTicks = 50): Promise<ServerResponse> {
-        return new Promise<ServerResponse>(async (resolve, reject) => {
+        return new Promise<ServerResponse>((resolve, reject) => {
             if (!data.id) return reject(new Error("No request ID!"));
             if (!data.type) return reject(new Error("No request type!"));
 
             const id = data.id;
             const timeout = system.runTimeout(() => {
-                world.setDynamicProperty(`hivemindRequest${id}`)
+                world.setDynamicProperty(`hivemindRequest${id}`);
                 this.pendingRequests.delete(id);
                 reject(new Error("Timed out on waiting for server response. Make sure you are connected: /script debugger connect traye.ddns.net"));
             }, timeoutTicks);
@@ -280,11 +294,18 @@ export class HivemindAPI {
                 }
             });
 
-            world.setDynamicProperty(`hivemindRequest${id}`, JSON.stringify(data));
+            const json = JSON.stringify(data);
+            const chunks = this.splitString(json);
+
+            world.setDynamicProperty(`hivemindRequest${id}|meta`, chunks.length);
+
+            for (let i = 0; i < chunks.length; i++) {
+                world.setDynamicProperty(`hivemindRequest${id}|${i}`, chunks[i]);
+            }
         });
     }
     private id() {
-        return Date.now() + ":" + this.apiName
+        return Date.now() + ":" + this.apiName;
     }
     private buildRequest(type: RequestTypes, data: RequestData = {}) {
         return {
@@ -292,13 +313,13 @@ export class HivemindAPI {
             type,
             apiName: this.apiName,
             scriptEvent: this.scriptEvent,
-            data,
-        } as Request
+            data
+        } as Request;
     }
     /**
      *  @remarks Sends a fetch request to a uri.
      */
     async sendHttpRequest(uri: string, init?: RequestInit, timeoutTicks = 50) {
-        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init }), timeoutTicks)
+        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init }), timeoutTicks);
     }
 }

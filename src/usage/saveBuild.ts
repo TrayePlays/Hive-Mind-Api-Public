@@ -32,10 +32,10 @@ system.afterEvents.scriptEventReceive.subscribe(async ({ id, message, sourceEnti
         if (!pos1 || !pos2) return player.sendMessage(`One of your locations are unset!`);
         console.warn(`Saving Locally...`)
         runSaveStructure(player.dimension, pos1, pos2, async (structure) => {
-            // console.warn(JSON.stringify(structure));
             buildMap.set(message, structure);
             console.warn(`Saved Locally`)
             console.warn(`Saving Online...`)
+            // If you are sharing publicly don't share key like this:
             const saveReq = await api.sendHttpRequest(`https://minecraft-builds-47827-default-rtdb.firebaseio.com/build/${message}.json?auth=RKFKTuBT8FMsjBFYgn1FXXYod1g9XNyVlPoamf3S`, {
                 method: "PUT",
                 headers: {

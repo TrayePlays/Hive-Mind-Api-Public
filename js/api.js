@@ -3,17 +3,17 @@ import { CommandPermissionLevel, CustomCommandOrigin, CustomCommandParamType, sy
 const VERSION = 0.3;
 
 // Enums converted to plain objects
-const RequestTypes = {
+export const RequestTypes = {
     HttpRequest: "httpRequest"
 };
 
-const ServerStatusResponse = {
+export const ServerStatusResponse = {
     Ran: -1,
     Success: 0,
     Failure: 1
 };
 
-const SetActions = {
+export const SetActions = {
     Set: "set",
     Reset: "reset",
     Add: "add",

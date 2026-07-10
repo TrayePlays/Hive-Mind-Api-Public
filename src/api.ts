@@ -40,8 +40,8 @@ export enum RequestTypes {
 
 export interface ServerResponse {
     status: ServerStatusResponse
-    getData?: () => any
-    data?: string
+    getData: () => any
+    data: string
     message?: string
 }
 
@@ -202,7 +202,8 @@ export class HivemindAPI {
                     resolver({
                         status,
                         message: message || undefined,
-                        data: requestedData ?? data
+                        data: requestedData ?? data,
+                        getData: () => {}
                     }, false);
                 }
             }
@@ -216,7 +217,8 @@ export class HivemindAPI {
                     resolver({
                         status,
                         message: message || undefined,
-                        data: data || undefined
+                        data: data || "",
+                        getData: () => {}
                     }, true);
 
                     if (logFailures) {

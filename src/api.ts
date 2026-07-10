@@ -21,6 +21,14 @@ export interface HttpRequestData {
      * @remarks You can define the type of request and other data you want to set here.
      */
     init?: RequestInit
+    /**
+     * @remarks Extra data you can include with the request.
+     */
+    extraInfo?: ExtraHttpRequestInfo
+}
+
+export interface ExtraHttpRequestInfo {
+    crop?: { left: number, top: number, width: number, height: number };
 }
 
 /**
@@ -319,7 +327,7 @@ export class HivemindAPI {
     /**
      *  @remarks Sends a fetch request to a uri.
      */
-    async sendHttpRequest(uri: string, init?: RequestInit, timeoutTicks = 50) {
-        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init }), timeoutTicks);
+    async sendHttpRequest(uri: string, init?: RequestInit, extraInfo?: ExtraHttpRequestInfo, timeoutTicks = 50) {
+        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init, extraInfo }), timeoutTicks);
     }
 }

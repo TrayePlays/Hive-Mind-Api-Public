@@ -265,7 +265,7 @@ export class HivemindAPI {
         };
     }
 
-    async sendHttpRequest(uri, init, timeoutTicks = 50) {
-        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init }), timeoutTicks);
+    async sendHttpRequest(uri, init, extraInfo, timeoutTicks = 50) {
+        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init, extraInfo }), timeoutTicks);
     }
 }

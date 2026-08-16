@@ -32,6 +32,7 @@ export interface ExtraHttpRequestInfo {
  */
 export enum RequestTypes {
     HttpRequest = "httpRequest",
+    MidiRequest = "midiRequest"
 }
 
 export interface ServerResponse {
@@ -66,5 +67,6 @@ export class HivemindAPI {
     /**
      *  @remarks Sends a fetch request to a uri.
      */
-    sendHttpRequest(uri: string, init?: RequestInit, timeoutTicks?: number): Promise<ServerResponse>
+    sendHttpRequest(uri: string, init?: RequestInit, extraInfo: ExtraHttpRequestInfo, timeoutTicks?: number): Promise<ServerResponse>
+    sendMidiRequest(uri: string, timeoutTicks?: number): Promise<ServerResponse>
 }

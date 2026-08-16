@@ -1,6 +1,6 @@
 import { CommandPermissionLevel, CustomCommandOrigin, CustomCommandParamType, system, world, CustomCommandResult, CustomCommandStatus, CustomCommand, CustomCommandSource } from "@minecraft/server";
 
-const VERSION = 0.3;
+const VERSION = 0.4;
 
 export interface Request {
     type: RequestTypes
@@ -35,7 +35,8 @@ export interface ExtraHttpRequestInfo {
  * Soon to add more request types!
  */
 export enum RequestTypes {
-    HttpRequest = "httpRequest"
+    HttpRequest = "httpRequest",
+    MidiRequest = "midiRequest"
 }
 
 export interface ServerResponse {
@@ -72,7 +73,7 @@ export class HivemindAPI {
     private responses: Map<string, any>;
     private scriptEvent: boolean;
     private logFailures: boolean;
-
+    private loadTick: number;
     /**
      * @remarks If your project has a namespace, you will need to define it in the settings for the functions to properly work. 
      * Requests may fail if you set nametag every tick. Settings for player list is who the request runs as.
@@ -92,6 +93,7 @@ export class HivemindAPI {
         this.namespace = settings.namespace;
         this.setupListeners();
         this.initSetup();
+        this.loadTick = system.currentTick;
     }
 
     private initSetup() {
@@ -120,13 +122,9 @@ export class HivemindAPI {
                 const origin = { sourceEntity, sourceType: CustomCommandSource.Entity };
                 const args = message.split(" ");
                 if (id === "hivemind:purpose") purposeCMD(origin);
-                
                 if (id === "hivemind:hivemind") hivemindCMD(origin);
-                
                 if (id === "hivemind:respond") respondCMD(origin, message);
-                
                 if (id === "hivemind:set") setCMD(origin, args[0] as SetActions, args[1], message.slice(args[0].length + args[1].length + 2));
-                
             })
         } else {
             system.beforeEvents.startup.subscribe(({ customCommandRegistry }) => {
@@ -192,18 +190,21 @@ export class HivemindAPI {
             const resolver = pendingRequests.get(id);
             let requestedData = responses.get(id);
             if (status == ServerStatusResponse.Ran) {
-                
                 try {
                     requestedData = JSON.parse(requestedData);
                     if (scriptEvent) requestedData = JSON.parse(requestedData)
                 } catch { }
                 if (resolver) {
-                    world.setDynamicProperty(`hivemindRequest${id}`)
+                    const chunks = world?.getDynamicProperty(`hivemindRequest${id}|meta`) as number ?? 0
+                    for (let i = 0; i < chunks; i++) {
+                        world.setDynamicProperty(`hivemindRequest${id}|${i}`)
+                    }
+                    world.setDynamicProperty(`hivemindRequest${id}|meta`)
                     resolver({
                         status,
                         message: message || undefined,
                         data: requestedData ?? data,
-                        getData: () => {}
+                        getData: () => { }
                     }, false);
                 }
             }
@@ -218,11 +219,10 @@ export class HivemindAPI {
                         status,
                         message: message || undefined,
                         data: data || "",
-                        getData: () => {}
+                        getData: () => { }
                     }, true);
-
                     if (logFailures) {
-                        console.error(new Error(message));
+                        console.warn(new Error(message));
                     }
                 }
             } else {
@@ -285,15 +285,31 @@ export class HivemindAPI {
      */
     private async sendRequestAsync(data: Request, timeoutTicks = 50): Promise<ServerResponse> {
         return new Promise<ServerResponse>((resolve, reject) => {
+            if (system.currentTick == this.loadTick) return reject(new Error("You can't run this in a system.run do 2 system.runs or run another way."))
             if (!data.id) return reject(new Error("No request ID!"));
             if (!data.type) return reject(new Error("No request type!"));
 
             const id = data.id;
+
+            const json = JSON.stringify(data);
+            const chunks = this.splitString(json);
+            world.setDynamicProperty(`hivemindRequest${id}|meta`, chunks.length);
+
+            for (let i = 0; i < chunks.length; i++) {
+                world.setDynamicProperty(`hivemindRequest${id}|${i}`, chunks[i]);
+            }
+
             const timeout = system.runTimeout(() => {
-                world.setDynamicProperty(`hivemindRequest${id}`);
+                world.setDynamicProperty(`hivemindRequest${id}|meta`);
+
+                for (let i = 0; i < chunks.length; i++) {
+                    world.setDynamicProperty(`hivemindRequest${id}|${i}`);
+                }
                 this.pendingRequests.delete(id);
-                reject(new Error("Timed out on waiting for server response. Make sure you are connected: /script debugger connect traye.ddns.net"));
+                console.warn("Timed out on waiting for server response. Make sure you are connected: /script debugger connect traye.ddns.net")
+                resolve({ status: ServerStatusResponse.Failure, message: "Timed out" } as ServerResponse);
             }, timeoutTicks);
+
 
             this.pendingRequests.set(id, (response, done) => {
                 system.clearRun(timeout);
@@ -303,15 +319,6 @@ export class HivemindAPI {
                     this.responses.delete(id);
                 }
             });
-
-            const json = JSON.stringify(data);
-            const chunks = this.splitString(json);
-
-            world.setDynamicProperty(`hivemindRequest${id}|meta`, chunks.length);
-
-            for (let i = 0; i < chunks.length; i++) {
-                world.setDynamicProperty(`hivemindRequest${id}|${i}`, chunks[i]);
-            }
         });
     }
     private id() {
@@ -331,5 +338,8 @@ export class HivemindAPI {
      */
     async sendHttpRequest(uri: string, init?: RequestInit, extraInfo?: ExtraHttpRequestInfo, timeoutTicks = 50) {
         return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init, extraInfo }), timeoutTicks);
+    }
+    async sendMidiRequest(uri: string, timeoutTicks = 50) {
+        return await this.sendRequestAsync(this.buildRequest(RequestTypes.MidiRequest, { uri }), timeoutTicks);
     }
 }

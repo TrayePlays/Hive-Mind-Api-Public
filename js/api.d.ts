@@ -43,6 +43,7 @@ export interface ServerResponse {
 }
 
 export enum ServerStatusResponse {
+    Running = -2,
     Ran = -1,
     Success = 0,
     Failure = 1
@@ -51,7 +52,8 @@ export enum ServerStatusResponse {
 export interface HiveMindAPISettings {
     namespace?: string,
     scriptEvent?: boolean
-    logFailures?: boolean
+    logFailures?: boolean,
+    onConnect?: () => void,
 }
 
 export class HivemindAPI {
@@ -62,11 +64,13 @@ export class HivemindAPI {
      * @remarks If your project has a namespace, you will need to define it in the settings for the functions to properly work. 
      * Requests may fail if you set nametag every tick. Settings for player list is who the request runs as.
      * They need to be connected to Hive Mind Servers for it to work!
+     * 
+     * @warn Namespace MUST have no spaces!!!
      */
     constructor(apiName: string, settings?: HiveMindAPISettings)
     /**
      *  @remarks Sends a fetch request to a uri.
      */
-    sendHttpRequest(uri: string, init?: RequestInit, extraInfo: ExtraHttpRequestInfo, timeoutTicks?: number): Promise<ServerResponse>
-    sendMidiRequest(uri: string, timeoutTicks?: number): Promise<ServerResponse>
+    sendHttpRequest(uri: string, init?: RequestInit, extraInfo: ExtraHttpRequestInfo, timeoutTicks?: number, onProgress?: (chunk: number, totalChunks: number) => void): Promise<ServerResponse>
+    sendMidiRequest(uri: string, timeoutTicks?: number, onProgress?: (chunk: number, totalChunks: number) => void): Promise<ServerResponse>
 }

@@ -1,6 +1,6 @@
 import { CommandPermissionLevel, CustomCommandOrigin, CustomCommandParamType, system, world, CustomCommandResult, CustomCommandStatus, CustomCommand, CustomCommandSource } from "@minecraft/server";
 
-const VERSION = 0.4;
+const VERSION = 0.5;
 
 export interface Request {
     type: RequestTypes
@@ -47,6 +47,7 @@ export interface ServerResponse {
 }
 
 export enum ServerStatusResponse {
+    Running = -2,
     Ran = -1,
     Success = 0,
     Failure = 1
@@ -63,13 +64,20 @@ export enum SetActions {
 interface HiveMindAPISettings {
     namespace?: string,
     scriptEvent?: boolean
-    logFailures?: boolean
+    logFailures?: boolean,
+    onConnect?: () => void,
 }
 
 export class HivemindAPI {
     readonly apiName: string;
     readonly namespace: string;
-    private pendingRequests: Map<string, (response: ServerResponse, done?: boolean) => void>;
+    private onConnect?: () => void;
+    private pendingRequests: Map<string, {
+        callback: (response: ServerResponse, done?: boolean) => void;
+        onProgress?: (chunk: number, totalChunks: number) => void;
+        totalChunks?: number;
+        receivedChunks?: number;
+    }>;
     private responses: Map<string, any>;
     private scriptEvent: boolean;
     private logFailures: boolean;
@@ -81,18 +89,19 @@ export class HivemindAPI {
      * 
      * @warn Namespace MUST have no spaces!!!
      */
-    constructor(apiName: string, settings: HiveMindAPISettings = { namespace: "hivemind", scriptEvent: true, logFailures: true }) {
+    constructor(apiName: string, settings: HiveMindAPISettings = { namespace: "hivemind", scriptEvent: true, logFailures: true, onConnect: undefined }) {
         if (settings.logFailures === undefined) settings.logFailures = true;
         if (settings.namespace === undefined) settings.namespace = "hivemind";
         if (settings.scriptEvent === undefined) settings.scriptEvent = true;
         this.logFailures = settings.logFailures;
         this.scriptEvent = settings.scriptEvent;
-        this.pendingRequests = new Map<string, (response: ServerResponse, done?: boolean) => void>();
+        this.pendingRequests = new Map();
         this.responses = new Map<string, any>();
         this.apiName = apiName;
         this.namespace = settings.namespace;
         this.setupListeners();
         this.initSetup();
+        this.onConnect = settings.onConnect;
         this.loadTick = system.currentTick;
     }
 
@@ -116,7 +125,6 @@ export class HivemindAPI {
         const responses = this.responses;
         const pendingRequests = this.pendingRequests;
         const scriptEvent = this.scriptEvent;
-
         if (scriptEvent) {
             system.afterEvents.scriptEventReceive.subscribe(({ id, message, sourceEntity }) => {
                 const origin = { sourceEntity, sourceType: CustomCommandSource.Entity };
@@ -170,12 +178,17 @@ export class HivemindAPI {
                 customCommandRegistry.registerCommand(set, setCMD);
             })
         }
-        function purposeCMD(origin: CustomCommandOrigin): CustomCommandResult {
+        // Had to change this to a const for the this parameter.
+        const purposeCMD = (origin: CustomCommandOrigin): CustomCommandResult => {
+            const connect = this.onConnect
             world.setDynamicProperty(`hivemindResponse`, JSON.stringify({
                 version: VERSION,
                 name,
                 scriptEvent
             }));
+            if (connect) {
+                connect();
+            }
             return { status: CustomCommandStatus.Success };
         }
 
@@ -187,7 +200,7 @@ export class HivemindAPI {
             const [id, statusStr, message, data] = response.split("|");
             const status = parseInt(statusStr);
             let realData: any
-            const resolver = pendingRequests.get(id);
+            const resolver = pendingRequests.get(id)?.callback;
             let requestedData = responses.get(id);
             if (status == ServerStatusResponse.Ran) {
                 try {
@@ -213,7 +226,7 @@ export class HivemindAPI {
                 if (!id) {
                     realReq = Array.from(pendingRequests.keys()).pop() as string;
                 }
-                const resolver = pendingRequests.get(realReq);
+                const resolver = pendingRequests.get(realReq)?.callback;
                 if (resolver) {
                     resolver({
                         status,
@@ -224,6 +237,15 @@ export class HivemindAPI {
                     if (logFailures) {
                         console.warn(new Error(message));
                     }
+                }
+            } else if (status == ServerStatusResponse.Running) {
+                const pending = pendingRequests.get(id);
+
+                if (pending) {
+                    const json: { totalChunks: number } = JSON.parse(data)
+
+                    pending.totalChunks = json.totalChunks;
+                    pending.receivedChunks = 0;
                 }
             } else {
                 try {
@@ -248,6 +270,12 @@ export class HivemindAPI {
                 let raw = responses.get(requestId) as string ?? "";
                 raw += rawData;
                 responses.set(requestId, raw);
+                const pending = pendingRequests.get(requestId);
+
+                if (pending?.onProgress) {
+                    pending.receivedChunks = (pending.receivedChunks ?? 0) + 1;
+                    pending.onProgress(pending.receivedChunks, pending.totalChunks ?? 0);
+                }
             }
             if (setAction === SetActions.Remove) {
                 const chunks = world?.getDynamicProperty(`hivemindRequest${requestId}|meta`) as number ?? 0
@@ -283,7 +311,7 @@ export class HivemindAPI {
     /**
      * @remarks Sends a request with the raw data you give it and returns a response. Runs for each in the player list (defaults to only hosts).
      */
-    private async sendRequestAsync(data: Request, timeoutTicks = 50): Promise<ServerResponse> {
+    private async sendRequestAsync(data: Request, timeoutTicks = 50, onProgress?: (chunk: number, totalChunks: number) => void): Promise<ServerResponse> {
         return new Promise<ServerResponse>((resolve, reject) => {
             if (system.currentTick == this.loadTick) return reject(new Error("You can't run this in a system.run do 2 system.runs or run another way."))
             if (!data.id) return reject(new Error("No request ID!"));
@@ -311,13 +339,16 @@ export class HivemindAPI {
             }, timeoutTicks);
 
 
-            this.pendingRequests.set(id, (response, done) => {
-                system.clearRun(timeout);
-                if (done) {
-                    this.pendingRequests.delete(id);
-                    resolve(response);
-                    this.responses.delete(id);
-                }
+            this.pendingRequests.set(id, {
+                callback: (response, done) => {
+                    system.clearRun(timeout);
+                    if (done) {
+                        this.pendingRequests.delete(id);
+                        resolve(response);
+                        this.responses.delete(id);
+                    }
+                },
+                onProgress
             });
         });
     }
@@ -336,10 +367,10 @@ export class HivemindAPI {
     /**
      *  @remarks Sends a fetch request to a uri.
      */
-    async sendHttpRequest(uri: string, init?: RequestInit, extraInfo?: ExtraHttpRequestInfo, timeoutTicks = 50) {
-        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init, extraInfo }), timeoutTicks);
+    async sendHttpRequest(uri: string, init?: RequestInit, extraInfo?: ExtraHttpRequestInfo, timeoutTicks = 50, onProgress?: (chunk: number, totalChunks: number) => void) {
+        return await this.sendRequestAsync(this.buildRequest(RequestTypes.HttpRequest, { uri, init, extraInfo }), timeoutTicks, onProgress);
     }
-    async sendMidiRequest(uri: string, timeoutTicks = 50) {
-        return await this.sendRequestAsync(this.buildRequest(RequestTypes.MidiRequest, { uri }), timeoutTicks);
+    async sendMidiRequest(uri: string, extraInfo?: ExtraHttpRequestInfo, timeoutTicks = 50, onProgress?: (chunk: number, totalChunks: number) => void) {
+        return await this.sendRequestAsync(this.buildRequest(RequestTypes.MidiRequest, { uri, extraInfo }), timeoutTicks, onProgress);
     }
 }

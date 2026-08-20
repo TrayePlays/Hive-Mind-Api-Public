@@ -40,4 +40,23 @@ world.afterEvents.itemUse.subscribe(async ({ itemStack }) => {
         // Website creates a new ID for each post
         world.sendMessage(`§6Id: ${postData.getData().id}`)
     }
+    if (itemStack.typeId == "minecraft:iron_ingot") {
+        const now = system.currentTick;
+
+        // This website shows a list of products (long fetch)
+        const uri = `https://dummyjson.com/products`;
+        world.sendMessage(`§aFetching ${uri}`);
+
+        // Tells you the progress
+        const reqData = await api.sendHttpRequest(uri, {}, undefined, 50, (chunk, totalChunks) => {
+            world.sendMessage(`Progress: ${chunk} / ${totalChunks}`);
+        });
+
+        // For getting the stringified version use .data
+        world.sendMessage(`§bRaw Data: ${reqData.data}`);
+
+        // For getting data off of it use .getData
+        world.sendMessage(`§eAuthor: ${reqData.getData().author}`);
+        world.sendMessage(`§dResponse Time: ${(system.currentTick - now) / 20}`);
+    }
 })

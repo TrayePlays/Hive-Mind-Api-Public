@@ -32,7 +32,8 @@ export interface ExtraHttpRequestInfo {
  */
 export enum RequestTypes {
     HttpRequest = "httpRequest",
-    MidiRequest = "midiRequest"
+    MidiRequest = "midiRequest",
+    PingRequest = "pingRequest"
 }
 
 export interface ServerResponse {
@@ -54,6 +55,7 @@ export interface HiveMindAPISettings {
     scriptEvent?: boolean
     logFailures?: boolean,
     onConnect?: () => void,
+    defaultTimeout?: number
 }
 
 export class HivemindAPI {
@@ -71,6 +73,7 @@ export class HivemindAPI {
     /**
      *  @remarks Sends a fetch request to a uri.
      */
-    sendHttpRequest(uri: string, init?: RequestInit, extraInfo: ExtraHttpRequestInfo, timeoutTicks?: number, onProgress?: (chunk: number, totalChunks: number) => void): Promise<ServerResponse>
+    sendHttpRequest(uri: string, init?: RequestInit, extraInfo?: ExtraHttpRequestInfo, timeoutTicks?: number, onProgress?: (chunk: number, totalChunks: number) => void): Promise<ServerResponse>
     sendMidiRequest(uri: string, timeoutTicks?: number, onProgress?: (chunk: number, totalChunks: number) => void): Promise<ServerResponse>
+    sendHttpRequest(timeoutTicks?: number): Promise<ServerResponse>
 }

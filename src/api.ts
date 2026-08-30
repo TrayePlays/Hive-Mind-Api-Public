@@ -133,7 +133,6 @@ export class HivemindAPI {
             system.afterEvents.scriptEventReceive.subscribe(({ id, message, sourceEntity }) => {
                 const origin = { sourceEntity, sourceType: CustomCommandSource.Entity };
                 const args = message.split(" ");
-                if (id != "hivemind:set") console.warn(`${id} | ${message.slice(0, 100)}`);
                 if (id === "hivemind:purpose") purposeCMD(origin);
                 if (id === "hivemind:hivemind") hivemindCMD(origin);
                 if (id === "hivemind:respond") respondCMD(origin, message);
